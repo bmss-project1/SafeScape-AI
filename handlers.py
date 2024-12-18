@@ -3,7 +3,7 @@ import datetime
 import logging
 
 
-def save_to_database(event_type, username, data_text, media_id):
+def save_to_database(event_type, username, data_text, media_id, latitude=None, longitude=None):
     username = username if username else "unknown"
     data_text = data_text if data_text else "No data provided"
     media_id = media_id if media_id else "N/A"
@@ -11,12 +11,11 @@ def save_to_database(event_type, username, data_text, media_id):
     conn = sqlite3.connect("instagram_data.db")
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO instagram_events (event_type, username, data_text, media_id, timestamp)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (event_type, username, data_text, media_id, datetime.datetime.now()))
+        INSERT INTO instagram_events (event_type, username, data_text, media_id, latitude, longitude, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (event_type, username, data_text, media_id, latitude, longitude, datetime.datetime.now()))
     conn.commit()
     conn.close()
-import logging
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -25,8 +24,13 @@ def handle_comment(value):
     username = value.get('from', {}).get('username', 'unknown')
     comment_text = value.get('text', 'No text')
     media_id = value.get('media', {}).get('id')
+
+    # Extract location data if present
+    latitude = value.get('location', {}).get('latitude', None)
+    longitude = value.get('location', {}).get('longitude', None)
+
     logging.info(f"Processing comment by {username}: {comment_text} on media {media_id}")
-    save_to_database("comment", username, comment_text, media_id)
+    save_to_database("comment", username, comment_text, media_id, latitude, longitude)
 
 def handle_message(value):
     username = value.get('sender', {}).get('id')
@@ -42,8 +46,13 @@ def handle_live_comment(value):
     username = value.get('from', {}).get('username', 'unknown')
     comment_text = value.get('text', 'No text')
     media_id = value.get('media', {}).get('id')
-    save_to_database("live_comment", username, comment_text, media_id)
 
+    # Extract location data if present
+    latitude = value.get('location', {}).get('latitude', None)
+    longitude = value.get('location', {}).get('longitude', None)
+
+    logging.info(f"Processing live comment by {username}: {comment_text} on media {media_id}")
+    save_to_database("live_comment", username, comment_text, media_id, latitude, longitude)
 def handle_optin(value):
     username = value.get('sender', {}).get('id', 'unknown')
     optin_data = str(value.get('optin', {}))
