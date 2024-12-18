@@ -1,95 +1,64 @@
 import sqlite3
 import pandas as pd
 
-# Database name
 DATABASE = "instagram_data.db"
 
-def fetch_all_data():
+def fetch_data():
     """
     Fetch all data from the instagram_events table.
     """
     conn = sqlite3.connect(DATABASE)
     query = "SELECT * FROM instagram_events"
-    df = pd.read_sql_query(query, conn)
+    data = pd.read_sql_query(query, conn)
     conn.close()
-    return df
+    return data
 
-def analyze_event_counts(df):
+def sentiment_analysis_report(data):
     """
-    Analyze and print the count of each event type.
+    Generate a sentiment analysis report.
     """
-    print("Event Type Counts:")
-    event_counts = df['event_type'].value_counts()
-    print(event_counts)
+    # Overall sentiment counts
+    sentiment_counts = data['sentiment'].value_counts()
+    print("Sentiment Counts:")
+    print(sentiment_counts)
     print("\n")
-    return event_counts
 
-def analyze_top_users(df):
-    """
-    Analyze and print the top users by activity.
-    """
-    if 'username' in df.columns:
-        print("Top Users by Activity:")
-        top_users = df['username'].value_counts()
-        print(top_users)
+    # Group sentiment by location (latitude, longitude)
+    if 'latitude' in data.columns and 'longitude' in data.columns:
+        sentiment_by_location = data.groupby(['latitude', 'longitude', 'sentiment']).size().reset_index(name='count')
+        print("Sentiment by Location:")
+        print(sentiment_by_location)
         print("\n")
-        return top_users
-
-def analyze_category(df, category):
-    """
-    Analyze specific category and print its breakdown.
-    """
-    category_data = df[df['event_type'] == category]
-    if not category_data.empty:
-        print(f"{category.capitalize()} Breakdown:")
-        print(category_data[['username', 'data_text', 'media_id', 'timestamp']])
-        print("\n")
-    else:
-        print(f"No data found for {category}.\n")
-    return category_data
-
-def analyze_recent_entries(df, hours=24):
-    """
-    Analyze and print entries in the last given hours.
-    """
-    recent_time = pd.Timestamp.now() - pd.Timedelta(hours=hours)
-    recent_entries = df[pd.to_datetime(df['timestamp']) > recent_time]
-    print(f"Recent Entries (Last {hours} Hours):")
-    print(recent_entries)
-    print("\n")
-    return recent_entries
-
-def analyze_date_range(df, start_date, end_date):
-    """
-    Analyze and print entries in a specific date range.
-    """
-    filtered_entries = df[
-        (pd.to_datetime(df['timestamp']) >= pd.Timestamp(start_date)) &
-        (pd.to_datetime(df['timestamp']) <= pd.Timestamp(end_date))
-    ]
-    print(f"Entries from {start_date} to {end_date}:")
-    print(filtered_entries)
-    print("\n")
-    return filtered_entries
-
-if __name__ == '__main__':
-    print("Analyzing Instagram Events...\n")
     
-    try:
-        # Fetch all data
-        df = fetch_all_data()
-        if df.empty:
-            print("No data found in the database.")
-        else:
-            # Perform analyses
-            analyze_event_counts(df)
-            analyze_top_users(df)
-            analyze_category(df, "comment")
-            analyze_category(df, "reaction")
-            analyze_category(df, "message")
-            analyze_recent_entries(df)
-            
-            # Example date range analysis
-            analyze_date_range(df, "2024-12-17", "2024-12-18")
-    except Exception as e:
-        print(f"An error occurred during analysis: {e}")
+    # Identify areas with high negative sentiment density
+    negative_density = sentiment_by_location[sentiment_by_location['sentiment'] == 'negative']
+    print("Areas with High Negative Sentiment Density:")
+    print(negative_density.sort_values(by='count', ascending=False).head(10))
+    print("\n")
+
+def summary_statistics(data):
+    """
+    Generate summary statistics for sentiment trends.
+    """
+    # Count of sentiments
+    sentiment_summary = data['sentiment'].value_counts()
+    print("Summary of Sentiments:")
+    print(sentiment_summary)
+    print("\n")
+
+    # Trends by time
+    if 'timestamp' in data.columns:
+        data['timestamp'] = pd.to_datetime(data['timestamp'])
+        trend_by_time = data.groupby([data['timestamp'].dt.date, 'sentiment']).size().reset_index(name='count')
+        print("Sentiment Trends by Date:")
+        print(trend_by_time)
+        print("\n")
+
+if __name__ == "__main__":
+    data = fetch_data()
+    print("Database Contents:")
+    print(data.head())
+    print("\n")
+
+    sentiment_analysis_report(data)
+    summary_statistics(data)

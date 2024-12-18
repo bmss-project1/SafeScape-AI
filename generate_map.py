@@ -1,42 +1,57 @@
 import sqlite3
 import folium
 
-DATABASE = "instagram_data.db"
-OUTPUT_FILE = "instagram_safety_map.html"
+# Connect to the database
+db_name = "instagram_data.db"
+conn = sqlite3.connect(db_name)
+cursor = conn.cursor()
 
-# Fetch data from the database
-def fetch_data():
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT latitude, longitude, sentiment, data_text FROM instagram_events")
-    rows = cursor.fetchall()
-    conn.close()
-    return rows
+# Query the database for all events
+query = """
+SELECT latitude, longitude, sentiment, username, data_text, timestamp
+FROM instagram_events
+WHERE latitude IS NOT NULL AND longitude IS NOT NULL
+"""
+cursor.execute(query)
+data = cursor.fetchall()
+conn.close()
 
-# Map sentiment to marker colors
-def sentiment_to_color(sentiment):
+# Create a map centered around the average location
+map_center = [0, 0]  # Default center for empty data
+if data:
+    avg_lat = sum(row[0] for row in data) / len(data)
+    avg_lon = sum(row[1] for row in data) / len(data)
+    map_center = [avg_lat, avg_lon]
+
+map_safety = folium.Map(location=map_center, zoom_start=2)
+
+# Add markers to the map
+for row in data:
+    latitude, longitude, sentiment, username, data_text, timestamp = row
+    # Determine the color based on sentiment
     if sentiment == "positive":
-        return "green"
+        color = "green"
     elif sentiment == "negative":
-        return "red"
+        color = "red"
     else:
-        return "blue"
+        color = "yellow"
+    
+    # Create a tooltip with event details
+    tooltip = f"""
+    <strong>Username:</strong> {username}<br>
+    <strong>Comment:</strong> {data_text}<br>
+    <strong>Sentiment:</strong> {sentiment}<br>
+    <strong>Timestamp:</strong> {timestamp}
+    """
+    
+    # Add a marker to the map
+    folium.Marker(
+        location=[latitude, longitude],
+        tooltip=tooltip,
+        icon=folium.Icon(color=color)
+    ).add_to(map_safety)
 
-# Create a map with markers
-def create_map():
-    data = fetch_data()
-    map_ = folium.Map(location=[0, 0], zoom_start=2)
-
-    for latitude, longitude, sentiment, text in data:
-        if latitude and longitude:
-            folium.Marker(
-                [latitude, longitude],
-                popup=f"Sentiment: {sentiment}<br>Text: {text}",
-                icon=folium.Icon(color=sentiment_to_color(sentiment))
-            ).add_to(map_)
-
-    map_.save(OUTPUT_FILE)
-    print(f"Map created and saved to {OUTPUT_FILE}")
-
-if __name__ == "__main__":
-    create_map()
+# Save the map to an HTML file
+output_file = "instagram_safety_map.html"
+map_safety.save(output_file)
+print(f"Map has been saved to {output_file}")
