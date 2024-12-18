@@ -32,12 +32,14 @@ cd SafeScape-AI
 ```
 ### Step 2: Set Up Virtual Environment
 
-#### Create a virtual environment
-```python -m venv venv```
+'''
+# Create a virtual environment
+python -m venv venv
 
-#### Activate the virtual environment
-##### For Windows:
-```venv\Scripts\activate```
+# Activate the virtual environment
+# Windows
+venv\Scripts\activate
 
-##### For Mac/Linux:
-```source venv/bin/activate```
+# Mac/Linux
+source venv/bin/activate
+'''
