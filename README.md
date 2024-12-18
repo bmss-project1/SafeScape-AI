@@ -29,3 +29,15 @@ Before setting up, ensure you have the following installed on your system:
 ```bash
 git clone <repository_url>
 cd SafeScape-AI 
+```
+### Step 2: Set Up Virtual Environment
+
+# Create a virtual environment
+```python -m venv venv```
+
+# Activate the virtual environment
+# For Windows:
+```venv\Scripts\activate```
+
+# For Mac/Linux:
+```source venv/bin/activate```
