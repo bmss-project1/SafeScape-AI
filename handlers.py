@@ -2,18 +2,22 @@ import sqlite3
 import datetime
 import logging
 
+from sentiment_analysis import analyze_sentiment
 
 def save_to_database(event_type, username, data_text, media_id, latitude=None, longitude=None):
     username = username if username else "unknown"
     data_text = data_text if data_text else "No data provided"
     media_id = media_id if media_id else "N/A"
 
+    # Analyze sentiment
+    sentiment = analyze_sentiment(data_text)
+
     conn = sqlite3.connect("instagram_data.db")
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO instagram_events (event_type, username, data_text, media_id, latitude, longitude, timestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (event_type, username, data_text, media_id, latitude, longitude, datetime.datetime.now()))
+        INSERT INTO instagram_events (event_type, username, data_text, media_id, latitude, longitude, sentiment, timestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (event_type, username, data_text, media_id, latitude, longitude, sentiment, datetime.datetime.now()))
     conn.commit()
     conn.close()
 

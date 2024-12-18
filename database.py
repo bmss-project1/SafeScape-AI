@@ -2,7 +2,7 @@ import sqlite3
 
 def initialize_database():
     """
-    Ensures the instagram_events table exists and adds new columns if they are missing.
+    Ensures the instagram_events table exists and adds missing columns dynamically.
     """
     conn = sqlite3.connect("instagram_data.db")
     cursor = conn.cursor()
@@ -19,16 +19,19 @@ def initialize_database():
         )
     ''')
     
-    # Add latitude and longitude columns if not already present
-    try:
-        cursor.execute("ALTER TABLE instagram_events ADD COLUMN latitude REAL")
-    except sqlite3.OperationalError:
-        print("Column 'latitude' already exists.")
+    # Add missing columns dynamically
+    columns_to_add = {
+        "latitude": "REAL",
+        "longitude": "REAL",
+        "sentiment": "TEXT"
+    }
     
-    try:
-        cursor.execute("ALTER TABLE instagram_events ADD COLUMN longitude REAL")
-    except sqlite3.OperationalError:
-        print("Column 'longitude' already exists.")
+    for column, data_type in columns_to_add.items():
+        try:
+            cursor.execute(f"ALTER TABLE instagram_events ADD COLUMN {column} {data_type}")
+            print(f"Column '{column}' added successfully.")
+        except sqlite3.OperationalError:
+            print(f"Column '{column}' already exists.")
     
     conn.commit()
     conn.close()

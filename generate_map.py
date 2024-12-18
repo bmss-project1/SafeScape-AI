@@ -1,34 +1,42 @@
 import sqlite3
 import folium
-import pandas as pd
 
-# Connect to the database and fetch data
-def fetch_event_data():
-    conn = sqlite3.connect("instagram_data.db")
-    query = "SELECT username, data_text, latitude, longitude, timestamp FROM instagram_events WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
-    df = pd.read_sql_query(query, conn)
+DATABASE = "instagram_data.db"
+OUTPUT_FILE = "instagram_safety_map.html"
+
+# Fetch data from the database
+def fetch_data():
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT latitude, longitude, sentiment, data_text FROM instagram_events")
+    rows = cursor.fetchall()
     conn.close()
-    return df
+    return rows
 
-# Generate the map
-def generate_safety_map():
-    data = fetch_event_data()
+# Map sentiment to marker colors
+def sentiment_to_color(sentiment):
+    if sentiment == "positive":
+        return "green"
+    elif sentiment == "negative":
+        return "red"
+    else:
+        return "blue"
 
-    # Create a base map centered at an approximate location
-    safety_map = folium.Map(location=[0, 0], zoom_start=2)
+# Create a map with markers
+def create_map():
+    data = fetch_data()
+    map_ = folium.Map(location=[0, 0], zoom_start=2)
 
-    # Add markers for each event
-    for _, row in data.iterrows():
-        folium.Marker(
-            location=[row['latitude'], row['longitude']],
-            popup=f"User: {row['username']}<br>Comment: {row['data_text']}<br>Time: {row['timestamp']}",
-            icon=folium.Icon(color="red", icon="info-sign"),
-        ).add_to(safety_map)
+    for latitude, longitude, sentiment, text in data:
+        if latitude and longitude:
+            folium.Marker(
+                [latitude, longitude],
+                popup=f"Sentiment: {sentiment}<br>Text: {text}",
+                icon=folium.Icon(color=sentiment_to_color(sentiment))
+            ).add_to(map_)
 
-    # Save the map as an HTML file
-    safety_map.save("instagram_safety_map.html")
-    print("Safety map generated: instagram_safety_map.html")
+    map_.save(OUTPUT_FILE)
+    print(f"Map created and saved to {OUTPUT_FILE}")
 
 if __name__ == "__main__":
-    generate_safety_map()
-    
+    create_map()
